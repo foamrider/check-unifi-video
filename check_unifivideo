@@ -1,0 +1,96 @@
+#!/usr/bin/php
+<?php
+/*
+ * File: check_unifivideo
+ * Parameters:
+ *             https://<unifi-video-address>:<port>
+ *             <api-key from Unifi Video>
+ *             <boolean-status-only>
+ *             <ignore-camera-name>,<ignore-camera-name2>
+ * Example: ./check_unifivideo.php https://192.168.1.20:7443 uyakfgagyeakrsyvcsak false UVC-G3-OUTSIDE,UVC-G3-OUTBACK
+ * Note: To use ignore parameter, cameras must have unique name (or just change the code to use MAC address instead), separated by comma
+ * Author: Tomas Kirkegaard
+ */
+
+// Options
+$verify_ssl=false; // verify ssl certificate
+$warn=48; // warn if recording is older than x hours
+$crit=96; // critical if recording is older than x hours
+
+// ** Run code ** //
+error_reporting(E_ERROR|E_WARNING);
+
+// Check parameters
+$url = $_SERVER['argv'][1];
+$api = $_SERVER['argv'][2];
+$status_only = $_SERVER['argv'][3]==="true"?true:false; // Only check connection status if true
+$ignore = explode(",", $_SERVER['argv'][4]);
+if (!$url||!$api) {
+    die("missing parameters");
+}
+
+// Get array from Unifi Video server
+$ch = curl_init();
+$curlConfig = array(
+    CURLOPT_URL            => rtrim($url, '/')."/api/2.0/camera?apiKey=".$api,
+    CURLOPT_RETURNTRANSFER => true
+);
+curl_setopt_array($ch, $curlConfig);
+if (!$verify_ssl) {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+}
+$raw = json_decode(curl_exec($ch), true);
+curl_close($ch);
+
+$warn = strtotime(date('d-m-Y H:i:s') . "- $warn hours");
+$crit = strtotime(date('d-m-Y H:i:s') . "- $crit hours");
+
+$output = "";
+$status = 0;
+
+if (!$raw||empty($raw['data'])) {
+    echo "UNKNOWN: Empty result\n";
+    exit(3);
+}
+
+foreach ($raw['data'] as $cam) {
+    if (in_array($cam['name'], $ignore)) {
+        continue;
+    }
+    if ($cam['state']!=="CONNECTED") {
+        $output .= $cam['name']. " is ".$cam['state'].", ";
+        $status = 2;
+    } elseif (!$status_only) {
+        if ($cam['lastRecordingStartTime']/1000<$crit) {
+            $output .= $cam['name']." (Last recording: ".(round((time()-$cam['lastRecordingStartTime']/1000)/3600,1))." hours ago), ";
+            $status = 2;
+        }
+        if ($cam['lastRecordingStartTime']/1000<$wan) {
+            $output .= $cam['name']." (Last recording: ".(round((time()-$cam['lastRecordingStartTime']/1000)/3600,1))." hours ago), ";
+            $status = $status < 2 ? 1 : $status;
+        }
+    }
+}
+
+switch ($status) {
+    case 0:
+        $output = "OK: All cameras is connected".($status_only?"":" and have fresh recordings");
+        break;
+    case 1:
+        $output = "WARNING: ".$output;
+        break;
+    case 2:
+        $output = "CRITICAL: ".$output;
+        break;
+    default:
+        $output = "UNKNOWN: Unexpected result";
+        break;
+}
+
+// Echo result
+echo $output."\n";
+exit($status);
+
+
+?>
