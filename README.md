@@ -7,7 +7,8 @@ Parameters:
             <api-key from Unifi Video> -> API key from Unifi Video (User setting)
             <boolean-status-only> -> false = check both connection status and last recording time, true = check only connection status
             <ignore-camera-name>,<ignore-camera-name2> -> Comma separated list over cameras to ignore
-Example: `./check_unifivideo.php https://192.168.1.20:7443 uyakfgagyeakrsyvcsak false UVC-G3-OUTSIDE,UVC-G3-OUTBACK`
+Example:
+`./check_unifivideo.php https://192.168.1.20:7443 uyakfgagyeakrsyvcsak false UVC-G3-OUTSIDE,UVC-G3-OUTBACK`
 
 Notes:
 * To use ignore parameter, cameras must have unique name (or just change the code to use MAC address instead), separated by comma
