@@ -58,19 +58,21 @@ foreach ($raw['data'] as $cam) {
     if (in_array($cam['name'], $ignore)) {
         continue;
     }
-    if ($cam['state']!=="CONNECTED") {
-        $output .= $cam['name']. " is ".$cam['state'].", ";
-        $status = 2;
-    } elseif (!$status_only) {
-        if ($cam['lastRecordingStartTime']/1000<$crit) {
-            $output .= $cam['name']." (Last recording: ".(round((time()-$cam['lastRecordingStartTime']/1000)/3600,1))." hours ago), ";
-            $status = 2;
-        }
-        if ($cam['lastRecordingStartTime']/1000<$wan) {
-            $output .= $cam['name']." (Last recording: ".(round((time()-$cam['lastRecordingStartTime']/1000)/3600,1))." hours ago), ";
-            $status = $status < 2 ? 1 : $status;
-        }
-    }
+	if ($cam['managed']=="true" ) {
+		if ($cam['state']!=="CONNECTED") {
+			$output .= $cam['name']. " is ".$cam['state'].", ";
+			$status = 2;
+		} elseif (!$status_only) {
+			if ($cam['lastRecordingStartTime']/1000<$crit) {
+				$output .= $cam['name']." (Last recording: ".(round((time()-$cam['lastRecordingStartTime']/1000)/3600,1))." hours ago), ";
+				$status = 2;
+			}
+			if ($cam['lastRecordingStartTime']/1000<$wan) {
+				$output .= $cam['name']." (Last recording: ".(round((time()-$cam['lastRecordingStartTime']/1000)/3600,1))." hours ago), ";
+				$status = $status < 2 ? 1 : $status;
+			}
+		}
+	}
 }
 
 switch ($status) {
